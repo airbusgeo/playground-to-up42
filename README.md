@@ -1,6 +1,6 @@
 # Playground to UP42 packaging converter
 
-An CLI to convert processing Docker images (deployed on ``Playground`` Platform) following the UP42 specification.
+A CLI to convert processing Docker images (deployed on ``Playground`` Platform) following the UP42 specification.
 
 ## Quickstart
 
