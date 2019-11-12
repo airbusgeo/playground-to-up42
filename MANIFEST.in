@@ -1,0 +1,2 @@
+include up42/templates/*
+include up42/templates/Dockerfiles/*

@@ -1,0 +1,25 @@
+docker:
+    input:
+        base_image: 'repository:tag'        # Base image to use (the packaged algorithm)
+        exposed_port: 8080                  # Port used by the Flask application
+        type: 'objectDetectionAOI'          # Type of detection (either ``objectDetectionAOI`` or ``changeDetectionAOI``)
+        routes:
+            process: '/api/process'         # Route that takes a resolution and a list of base64-encoded tiles and runs predictions. It returns a valid GeoJSON, following the GeoPaaS API.
+            healthcheck: '/api/healthcheck' # Route used to be sure the application is ruuning well
+        command: null                       # Override, if not null, base image command instruction with user-defined command
+
+    output:
+        tag: 'test'                         # Tag of the built image
+        workdir: null                       # Override, if not null. The WORKDIR instruction sets the working directory for any RUN, CMD, ENTRYPOINT, COPY and ADD instructions that follow it in the Dockerfile.
+
+manifest:
+    name: 'name'                            # Name of your block. This name must be unique for your account.
+    display_name: 'Pretty name'             # Name of the block as displayed in the UP42 UI (no need to be unique)
+    type: 'processing'                      # Either "data" or "processing". This provides a hint to the platform when validating workflows. 
+    tags:                                   # List of tags used for searching and filtering blocks in the UP42 UI.
+        - 'generic'
+    description: 'Description'              # Free-text explanation of what your block does
+    parameters: {}                          # For data blocks, list of all query parameters the block supports. For processing blocks, the run-time parameters that your block can optionally specify.
+    machine: 'small'                        # Either "small", "medium", "large" or "xlarge"
+    input_capabilities: {}                  # The capabilities that your block requires to run
+    output_capabilities: {}                 # The capabilities that your block outputs when it is finished. 
