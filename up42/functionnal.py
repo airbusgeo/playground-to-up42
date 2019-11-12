@@ -204,7 +204,7 @@ def copy_templates_files(output_directory, operating_system):
     elif operating_system == OperatingSystem.CENTOS:
         shutil.copyfile(templates_directory / 'Dockerfiles' / 'centos.Dockerfile', output_directory / 'Dockerfile')
     else:
-        raise ValueError('This operating system is supported yet: {}'.format(operating_system))
+        raise ValueError('This operating system is not supported yet: {}'.format(operating_system))
 
     loguru.logger.success('Templates files are successfully copied to: {}'.format(str(output_directory)))
 
@@ -337,7 +337,7 @@ def _extract_command(docker_config):
         if command is None:
             command = docker_image.attrs['Config']['Entrypoint']
     except KeyError:
-        raise exceptions.DockerImageBuildException('Unable to fetch CMD instruction in image.')
+        raise exceptions.DockerImageBuildException('Unable to fetch CMD and ENTRYPOINT instruction in image.')
     else:
         # Reformat command to string
         if isinstance(command, list):
