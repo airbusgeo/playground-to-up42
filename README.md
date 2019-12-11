@@ -134,5 +134,5 @@ To run the application, you need two folders, one with some GeoTIFF tiles (``inp
 To do so, you just need to run the following command, replacing what needs to be replaced (paths and tag):
 
 ```docker
-docker run --rm [PATH_TO_INPUT_FOLDER]:/tmp/input -v [PATH_TO_OUTPUT_FOLDER]:/tmp/output [TAG_OF_YOUR_IMAGE]
+docker run --rm -v [PATH_TO_INPUT_FOLDER]:/tmp/input -v [PATH_TO_OUTPUT_FOLDER]:/tmp/output [TAG_OF_YOUR_IMAGE]
 ```
