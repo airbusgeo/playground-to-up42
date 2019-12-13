@@ -209,15 +209,17 @@ class Predictor(object):
         process_route {str}     -- Route to be used to run processing
         healthcheck_route {str} -- Route to be used to check healthiness of the application
         algorithm_type {str}    -- Type of the algorithm used (either ``objectDetectionAOI`` or ``changeDetectionAOI``)
+        resolution {float}      -- Resolution in meters/pixel of the tile to process
 
     """
 
-    def __init__(self, port, process_route, healthcheck_route, algorithm_type):
+    def __init__(self, port, process_route, healthcheck_route, algorithm_type, resolution):
         # Set attributes
         self._port = port
         self._process_route = process_route
         self._healthcheck_route = healthcheck_route
         self._type = algorithm_type
+        self._resolution = resolution
 
         # Try health check every 5 seconds until it workds. After 5 tries, abort
         for _ in range(10):
@@ -268,20 +270,21 @@ class Predictor(object):
             {list} -- List of predictions as valid GeoJSON features
 
         """
-        def run_process(encoded_tiles, port, process_route):
+        def run_process(encoded_tiles, port, process_route, resolution):
             """Run process for the given couple of tile.
 
             Arguments:
-                encoded_tiles {list} -- List of encoded tiles, using Base64, to process
+                encoded_tiles {list}    -- List of encoded tiles, using Base64, to process
                 port {int}              -- Port to be used to run processing
                 process_route {str}     -- Route to be used to run processing
+                resolution {float}      -- Resolution in meters/pixel of the tile to process
 
             Returns:
                 {list} -- List of predictions as valid GeoJSON features
 
             """
             # Build payload
-            data = {'resolution': 1.0, 'tiles': encoded_tiles}
+            data = dict(resolution=resolution, tiles=encoded_tiles)
             # Launch request
             url = "http://0.0.0.0:{port}{process_route}".format(port=port, process_route=process_route)
             r = requests.post(url, json=data)
@@ -295,7 +298,7 @@ class Predictor(object):
         # Encode image to base64
         encoded_tiles = [encode_tile(tile) for tile in tiles_couple]
         # Run predict process
-        features = run_process(encoded_tiles, self._port, self._process_route)
+        features = run_process(encoded_tiles, self._port, self._process_route, self._resolution)
         print('Result: {}\n'.format(features))
         # Transform coordinates to (longitude, latitude)
         return apply_transformation(features, transform)
@@ -324,12 +327,13 @@ if __name__ == "__main__":
     parser.add_argument('--healthcheck_route', type=str, help='Route to be used to check application health')
     parser.add_argument('--type',  type=AlgorithmType, choices=list(AlgorithmType),
                         help='Type of algorithm to be packaged')
+    parser.add_argument('--resolution', type=float, help='Resolution (meters/pixel) of the tiles to process')
 
     args = parser.parse_args()
 
     try:
         # Init predictor
-        predictor = Predictor(args.port, args.process_route, args.healthcheck_route, args.type)
+        predictor = Predictor(args.port, args.process_route, args.healthcheck_route, args.type, args.resolution)
 
         # Run predictions on dataset
         results = predictor.run_predictions_on_dataset(INPUT_FOLDER)

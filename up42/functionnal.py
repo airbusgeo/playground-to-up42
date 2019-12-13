@@ -287,6 +287,7 @@ def build_docker_image(docker_config, output_directory):
         'HEALTHCHECK_ROUTE': str(docker_config['input']['routes']['healthcheck']),
         'RUN_COMMAND': str(command),
         'TYPE': str(docker_config['input']['type']),
+        'RESOLUTION': str(docker_config['input']['resolution']),
         'WORKDIR': str(workdir)
     }
 

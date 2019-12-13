@@ -3,6 +3,7 @@ docker:
         base_image: 'repository:tag'        # Base image to use (the packaged algorithm)
         exposed_port: 8080                  # Port used by the previous docker image
         type: 'objectDetectionAOI'          # Type of detection (either ``objectDetectionAOI`` or ``changeDetectionAOI``)
+        resolution: 0.6                     # Resolution, in meters per pixel, of the tiles to process
         routes:
             process: '/api/process'         # Route that takes a resolution and a list of base64-encoded tiles and runs predictions. It returns a valid GeoJSON, following the GeoPaaS API.
             healthcheck: '/api/healthcheck' # Route used to be sure the application is up and running

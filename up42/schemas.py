@@ -2,17 +2,16 @@
 from schema import Schema, And, Use, Or
 
 
-ROUTES_SCHEMA = Schema({
-    'healthcheck': And(Use(str), len),
-    'process': And(Use(str), len)
-}, ignore_extra_keys=True)
-
 INPUT_SCHEMA = Schema({
     'base_image': And(Use(str), len),
     'exposed_port': Use(int),
-    'type': And(Use(str), lambda type: type in ['objectDetectionAOI', 'changeDetectionAOI']),
-    'routes': ROUTES_SCHEMA,
-    'command': And(Use(str), len)
+    'type': Or('objectDetectionAOI', 'changeDetectionAOI'),
+    'routes': {
+        'healthcheck': And(Use(str), len),
+        'process': And(Use(str), len)
+    },
+    'command': And(Use(str), len),
+    'resolution': And(Use(float), lambda resolution: resolution > 0.0)
 }, ignore_extra_keys=True)
 
 OUTPUT_SCHEMA = Schema({
@@ -34,7 +33,9 @@ MANIFEST_SCHEMA = Schema({
     'tags': Use(list),
     'description': Use(str),
     'parameters': Use(dict),
-    'machine': {'type': Or('small', 'medium', 'large', 'xlarge', 'gpu_nvidia_tesla_k80')},
+    'machine': {
+        'type': Or('small', 'medium', 'large', 'xlarge', 'gpu_nvidia_tesla_k80')
+    },
     'input_capabilities': Use(dict),
     'output_capabilities': Use(dict)
 }, ignore_extra_keys=True)
