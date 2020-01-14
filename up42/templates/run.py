@@ -18,8 +18,6 @@ import requests
 P3857 = pyproj.Proj(init='epsg:3857')
 P4326 = pyproj.Proj(init='epsg:4326')
 
-# INPUT_FOLDER = '/home/alexandre/Downloads/output'
-# OUTPUT_FILE = '/home/alexandre/Downloads/output/data_result.json'
 INPUT_FOLDER = '/tmp/input'
 OUTPUT_FILE = '/tmp/output/data.json'
 
