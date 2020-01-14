@@ -76,6 +76,34 @@ def get_tiles_couples(input_path=INPUT_FOLDER):
         return tiles_couples
 
 
+def get_common_properties(input_path=INPUT_FOLDER):
+    """Read data.json file in input folder and extract common properties (everything except up42.data.aoiclipped).
+
+    Arguments:
+        input_path {str} -- Folder where to find tiles and GeoJSON summary
+
+    Returns:
+        {dict} -- A mapping of properties
+
+    """
+    # Check if data.json exists
+    geojson_filepath = pathlib.Path(input_path) / 'data.json'
+    if not geojson_filepath.exists():
+        raise FileNotFoundError('The geojson summary file at the root of the input folder does not exist.')
+
+    # Parse it
+    with open(geojson_filepath.as_posix(), 'r') as file:
+        data = geojson.load(file)
+
+        # Take properties of first feature, if exists
+        properties = {}
+        if len(data['features']) >= 1:
+            properties = data['features'][0]['properties']
+            properties.pop('up42.data.aoiclipped', None)
+
+        return properties
+
+
 def check_dataset_integrity(tiles_couples, type):
     """Check that all couples of tiles have same length and match the algorithme type of detection.
 
@@ -252,9 +280,12 @@ class Predictor(object):
         # Run predictions on tiles couples asynchronously
         features_lists = [self._run_predictions_on_tile(couple) for couple in tiles_couples]
 
+        # Extract properties from data block
+        data_block_properties = get_common_properties(input_path=input_path)
+
         # Aggregate geojson
         features = [feature for features_list in features_lists for feature in features_list]
-        collection = geojson.FeatureCollection(features)
+        collection = geojson.FeatureCollection(features, data_block_properties=data_block_properties)
 
         return collection
 
