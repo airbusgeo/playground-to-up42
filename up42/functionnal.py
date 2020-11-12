@@ -70,7 +70,7 @@ def create_manifest(manifest_config, output_directory, filename='UP42Manifest.js
     """
     # Fill manifest
     manifest = {
-        '_up42_specification_version': 1,
+        '_up42_specification_version': 2,
         'name': manifest_config['name'],
         'type': manifest_config['type'],
         'tags': manifest_config['tags'],

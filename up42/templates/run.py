@@ -56,8 +56,9 @@ def get_tiles_couples(input_path=INPUT_FOLDER):
         # Remap features
         for feature in data['features']:
             # Exract tile relative path
-            tile_path = feature['properties']['up42.data.aoiclipped']
-
+            #tile_path = feature['properties']['up42.data.aoiclipped'] # v1
+            tile_path = feature['properties']['up42.data_path'] # v2
+            
             # Extract tile indexes (template = folder / tile_id + '_' + indexes + '.tif')
             indexes = tile_path.split('/')[1].replace('.tif', '').split('_')[-1]
 
@@ -77,7 +78,7 @@ def get_tiles_couples(input_path=INPUT_FOLDER):
 
 
 def get_common_properties(input_path=INPUT_FOLDER):
-    """Read data.json file in input folder and extract common properties (everything except up42.data.aoiclipped).
+    """Read data.json file in input folder and extract common properties (everything except up42.data.aoiclipped or up42.data_path).
 
     Arguments:
         input_path {str} -- Folder where to find tiles and GeoJSON summary
@@ -99,7 +100,8 @@ def get_common_properties(input_path=INPUT_FOLDER):
         properties = {}
         if len(data['features']) >= 1:
             properties = data['features'][0]['properties']
-            properties.pop('up42.data.aoiclipped', None)
+            #properties.pop('up42.data.aoiclipped', None) # v1
+            properties.pop('up42.data_path', None) # v2
 
         return properties
 
