@@ -26,7 +26,7 @@ DOCKER_CONFIG_SCHEMA = Schema({
 
 
 MANIFEST_SCHEMA = Schema({
-    '_up42_specification_version': And(Use(int), lambda version: version == 1),
+    '_up42_specification_version': And(Use(int), lambda version: version == 2),
     'name': And(Use(str), len),
     'display_name': And(Use(str), len),
     'type': Or('data', 'processing'),
