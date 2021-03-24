@@ -320,8 +320,7 @@ class Predictor(object):
             if 'http' in process_route:
                 url = process_route
             else:
-                "http://0.0.0.0:{port}{process_route}".format(port=port, process_route=process_route)
-            url = process_route
+                url = "http://0.0.0.0:{port}{process_route}".format(port=port, process_route=process_route)
             r = requests.post(url, json=data)
             r.raise_for_status()
             # Get content as JSON object
@@ -351,7 +350,6 @@ class Predictor(object):
         else:
             r = requests.get('http://0.0.0.0:{port}{route}'.format(port=self._port, route=self._healthcheck_route))
 
-        r = requests.get(self._healthcheck_route)
         r.raise_for_status()
         # Check status code
         assert r.status_code == 200, 'Application is not responding a 200 (OK) for healthcheck'
