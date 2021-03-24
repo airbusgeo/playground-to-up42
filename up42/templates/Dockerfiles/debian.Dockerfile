@@ -11,7 +11,8 @@ RUN apt-get update && \
     apt-get install -y software-properties-common && \
     add-apt-repository ppa:ubuntugis/ppa && \
     apt-get install -y --no-install-recommends python3 python3-pip python3-dev gdal-bin libgdal-dev && \
-    pip3 install --no-cache-dir rasterio pyproj==2.4.0 requests geojson
+    pip3 install --no-cache-dir setuptools numpy==1.18.0 && \
+    pip3 install --no-cache-dir rasterio==1.1.1 pyproj==2.4.0 requests geojson
 
 # Copy application and models
 COPY . /block/
