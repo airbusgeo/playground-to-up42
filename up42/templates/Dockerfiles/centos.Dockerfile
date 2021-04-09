@@ -9,7 +9,7 @@ LABEL "up42_manifest"=${MANIFEST}
 # Install dependencies
 RUN yum update -y && \
     yum install -y gdal gdal-devel && \
-    pip3 install --no-cache-dir rasterio pyproj requests geojson
+    pip3 install --no-cache-dir rasterio pyproj requests geojson Pillow==7.2.0
 
 # Copy application and models
 COPY . /block/

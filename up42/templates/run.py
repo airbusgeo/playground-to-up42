@@ -2,6 +2,7 @@
 import argparse
 import base64
 import enum
+import io
 import json
 import pathlib
 import sys
@@ -9,6 +10,7 @@ import time
 
 # Third-party libraries
 import geojson
+import PIL.Image
 import pyproj
 import rasterio
 import requests
@@ -155,12 +157,14 @@ def encode_tile(tile_path):
         {bytes} -- Encoded tile using Base64
 
     """
-    with open(tile_path, 'rb') as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
+    image = PIL.Image.open(tile_path).convert('RGB')
+    buffered = io.BytesIO()
+    image.save(buffered, format='PNG')
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 
 def apply_projection(xy, transform):
-    """Convert (x, y) coordinates (tile reference) to (lon, lat) system.
+    """Convert (x, y) coordinates (tile reference) to (lon, lat) system (EPSG:3857 to ZPSG:4326).
 
     Arguments:
         xy {list}                   -- Position of a polygon vertex, as [X, Y] coordinates
@@ -316,12 +320,18 @@ class Predictor(object):
             """
             # Build payload
             data = dict(resolution=resolution, tiles=encoded_tiles)
+            # Build headers
+            headers = {
+                'Content-Type': 'application/json',
+                'X-Correlation-ID': '9876543210'
+            }
             # Launch request
             if 'http' in process_route:
                 url = process_route
             else:
-                url = "http://0.0.0.0:{port}{process_route}".format(port=port, process_route=process_route)
-            r = requests.post(url, json=data)
+                url = 'http://0.0.0.0:{port}{process_route}'.format(port=port, process_route=process_route)
+            r = requests.post(url, json=data, headers=headers)
+            print(r.content)
             r.raise_for_status()
             # Get content as JSON object
             return json.loads(r.content.decode('utf-8'))['features']
@@ -358,7 +368,7 @@ class Predictor(object):
 if __name__ == "__main__":
 
     # Define and parse arguments
-    parser = argparse.ArgumentParser("Run predictions on GeoTIFF tiles.")
+    parser = argparse.ArgumentParser('Run predictions on GeoTIFF tiles.')
 
     parser.add_argument('--port', type=str, help='Port exposed by the Flask application.')
     parser.add_argument('--process_route', type=str, help='Route to be used to send tiles and run predictions')
