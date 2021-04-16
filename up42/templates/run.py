@@ -190,8 +190,20 @@ def apply_transformation(features, transform):
         {list} -- List of reprojected predictions (in geographic CRS), as valid GeoJSON features
 
     """
+    def is_valid_feature(feature):
+        """Check if feature is valid."""
+        geojson_feature = geojson.GeoJSON.to_instance(feature)
+        if not geojson_feature.is_valid:
+            return False
+        if len(geojson_feature.geometry.coordinates) == 0:
+            return False
+        return True
+
     new_features = []
     for feature in features:
+        # Check if feature is valid
+        if not is_valid_feature(feature):
+            continue
         # Transform geometry
         new_geometry = transform_geometry(feature['geometry'], transform)
         new_feature = geojson.Feature(geometry=new_geometry, properties=feature['properties'])
@@ -331,7 +343,6 @@ class Predictor(object):
             else:
                 url = 'http://0.0.0.0:{port}{process_route}'.format(port=port, process_route=process_route)
             r = requests.post(url, json=data, headers=headers)
-            print(r.content)
             r.raise_for_status()
             # Get content as JSON object
             return json.loads(r.content.decode('utf-8'))['features']
