@@ -4,6 +4,7 @@ import base64
 import enum
 import io
 import json
+import operator
 import pathlib
 import sys
 import time
@@ -21,7 +22,11 @@ P3857 = pyproj.Proj(init='epsg:3857')
 P4326 = pyproj.Proj(init='epsg:4326')
 
 INPUT_FOLDER = '/tmp/input'
-OUTPUT_FILE = '/tmp/output/data.json'
+OUTPUT_FOLDER = '/tmp/output'
+METADATA_FILENAME = 'data.json'
+METADATA_OUTPUT_FILE = '{folder}/{filename}'.format(folder=OUTPUT_FOLDER, filename=METADATA_FILENAME)
+PREDICTIONS_FILENAME = 'predictions.json'
+PREDICTIONS_OUTPUT_FILE = '{folder}/{filename}'.format(folder=OUTPUT_FOLDER, filename=PREDICTIONS_FILENAME)
 
 
 # Enums
@@ -79,14 +84,14 @@ def get_tiles_couples(input_path=INPUT_FOLDER):
         return tiles_couples
 
 
-def get_common_properties(input_path=INPUT_FOLDER):
+def get_metadata_collection(input_path=INPUT_FOLDER):
     """Read data.json file in input folder and extract common properties (everything except up42.data.aoiclipped or up42.data_path).
 
     Arguments:
         input_path {str} -- Folder where to find tiles and GeoJSON summary
 
     Returns:
-        {dict} -- A mapping of properties
+        {FeatureCollection} -- A mapping of properties
 
     """
     # Check if data.json exists
@@ -100,20 +105,37 @@ def get_common_properties(input_path=INPUT_FOLDER):
 
         # Take properties of first feature, if exists
         properties = {}
+        feature = geojson.Feature()
         if len(data['features']) >= 1:
             properties = data['features'][0]['properties']
             #properties.pop('up42.data.aoiclipped', None) # v1
             properties.pop('up42.data_path', None) # v2
 
-        return properties
+            # Compute image feature
+            bboxes = [feature['bbox'] for feature in data['features']]
+            min_lon = min(bboxes, key=operator.itemgetter(0))[0]
+            min_lat = min(bboxes, key=operator.itemgetter(1))[1]
+            max_lon = max(bboxes, key=operator.itemgetter(2))[2]
+            max_lat = max(bboxes, key=operator.itemgetter(3))[3]
+            bbox = [min_lon, min_lat, max_lon, max_lat]
+            polygon = geojson.Polygon(coordinates=[[
+                [bbox[0], bbox[1]],
+                [bbox[0], bbox[3]],
+                [bbox[2], bbox[3]],
+                [bbox[2], bbox[1]],
+                [bbox[0], bbox[1]]
+            ]])
+            feature = geojson.Feature(bbox=bbox, geometry=polygon, properties=properties)
+
+        return geojson.FeatureCollection(features=[feature])
 
 
-def check_dataset_integrity(tiles_couples, type):
+def check_dataset_integrity(tiles_couples, algorithm_type):
     """Check that all couples of tiles have same length and match the algorithme type of detection.
 
     Arguments:
         tiles_couples {list} -- List of tiles couples to process
-        type {str}              -- Type of algorithm to run (either ``objectDetectionAOI`` or ``changeDetectionAOI``)
+        algorithm_type {str} -- Type of algorithm to run (either ``objectDetectionAOI`` or ``changeDetectionAOI``)
 
     Raises:
         {AssertionError}    --When couples have different length or length does not match required length
@@ -125,9 +147,9 @@ def check_dataset_integrity(tiles_couples, type):
     if len(couple_length_set) not in (0, 1):
         raise ValueError('All couples must have the same number of images!')
 
-    if args.type == AlgorithmType.OBJECT_DETECTION:
+    if algorithm_type == AlgorithmType.OBJECT_DETECTION:
         assert couple_length_set == set([1]), 'Object detection must work with a single image at a time.'
-    elif args.type == AlgorithmType.CHANGE_DETECTION:
+    elif algorithm_type == AlgorithmType.CHANGE_DETECTION:
         assert couple_length_set == set([2]), 'Change detection must work with two images at a time.'
     else:
         raise ValueError('Invalid detection type.')
@@ -211,16 +233,21 @@ def apply_transformation(features, transform):
     return new_features
 
 
-def save_output_to_disk(result, output_file=OUTPUT_FILE):
+def save_output_to_disk(metadata_collection, predictions_collection):
     """Write the result data to the /tmp/output directory.
 
     Arguments:
-        result {geojson.FeatureCollection} -- Collection of predictions
-        output_file {str} -- Path where to store GeoJSON file
+        metadata_collection {FeatureCollection}     -- Collection of image metadata.
+        predictions_collection {FeatureCollection}  -- Collection of predictions
 
     """
-    with open(output_file, "w") as fp:
-        fp.write(json.dumps(result))
+    with open(METADATA_OUTPUT_FILE, 'w') as fp:
+        # Add up42 data_path property
+        metadata_collection['features'][0]['properties']['up42.data_path'] = PREDICTIONS_FILENAME
+        fp.write(json.dumps(metadata_collection))
+
+    with open(PREDICTIONS_OUTPUT_FILE, 'w') as fp:
+        fp.write(json.dumps(predictions_collection))
 
 
 def transform_geometry(geometry, transform):
@@ -286,7 +313,7 @@ class Predictor(object):
             input_path {str} -- Folder where to find tiles and GeoJSON summary
 
         Returns:
-            {geojson.Featurecollection} -- Collection of predictions in Geographic CRS
+            {geojson.FeatureCollection} -- Collection of predictions in Geographic CRS
 
         """
         # Retrieve tiles to be processed in input folder
@@ -299,13 +326,14 @@ class Predictor(object):
         features_lists = [self._run_predictions_on_tile(couple) for couple in tiles_couples]
 
         # Extract properties from data block
-        data_block_properties = get_common_properties(input_path=input_path)
+        image_metadata_collection = get_metadata_collection(input_path=input_path)
 
         # Aggregate geojson
         features = [feature for features_list in features_lists for feature in features_list]
-        collection = geojson.FeatureCollection(features, data_block_properties=data_block_properties)
+        predictions_collection = geojson.FeatureCollection(features)
+        # predictions_collection = geojson.FeatureCollection(features, data_block_properties=data_block_properties)
 
-        return collection
+        return image_metadata_collection, predictions_collection
 
     def _run_predictions_on_tile(self, tiles_couple):
         """Run predictions on a couple of tiles (1 = object detection, 2 = change detection) and return output.
@@ -395,10 +423,10 @@ if __name__ == "__main__":
         predictor = Predictor(args.port, args.process_route, args.healthcheck_route, args.type, args.resolution)
 
         # Run predictions on dataset
-        results = predictor.run_predictions_on_dataset(INPUT_FOLDER)
+        metadata_collection, predictions_collection = predictor.run_predictions_on_dataset(INPUT_FOLDER)
 
         # Save output
-        save_output_to_disk(results, output_file=OUTPUT_FILE)
+        save_output_to_disk(metadata_collection, predictions_collection)
 
     except Exception as error:
         print(error)
